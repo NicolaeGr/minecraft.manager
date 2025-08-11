@@ -15,7 +15,6 @@ import (
 	"github.com/mcstatus-io/mcutil/v4/query"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/joho/godotenv"
 )
 
 func getFallbackStatus() (count int, max int, playerNames []string, err error) {
@@ -38,7 +37,6 @@ func getFallbackStatus() (count int, max int, playerNames []string, err error) {
 }
 
 func StartBot(mgr *manager.ServerManager) {
-	godotenv.Load()
 	token := os.Getenv("DISCORD_BOT_TOKEN")
 	if token == "" {
 		fmt.Println("DISCORD_BOT_TOKEN not set")
