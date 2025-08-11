@@ -19,7 +19,10 @@
         buildInputs = [ pkgs.bash pkgs.busybox ];
 
         postInstall = ''
-          --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.bash pkgs.busybox ]}
+          for bin in $out/bin/*; do
+            wrapProgram "$bin" \
+              --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.bash pkgs.busybox ]}
+          done
         '';
       };
 
