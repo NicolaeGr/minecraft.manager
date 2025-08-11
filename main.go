@@ -19,7 +19,6 @@ func main() {
 	os.Chdir(*workingPath)
 
 	mgr := manager.NewServerManager()
-	mgr.ShowServerStdout = false
 	fmt.Println("Starting Discord bot...")
 
 	// Start idle watcher in background
