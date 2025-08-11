@@ -29,6 +29,10 @@ type ServerManager struct {
 	handlerResults map[string]interface{}
 }
 
+func (sm *ServerManager) GetPlaypaerList() (any, any, any, any) {
+	panic("unimplemented")
+}
+
 func NewServerManager() *ServerManager {
 	return &ServerManager{
 		handlers:       make(map[string]ConsoleHandler),
