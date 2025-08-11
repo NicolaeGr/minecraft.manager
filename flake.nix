@@ -16,19 +16,22 @@
         vendorHash = null;
 
         nativeBuildInputs = [ pkgs.makeWrapper ];
-        buildInputs = [ pkgs.bash pkgs.busybox ];
+        buildInputs = [ pkgs.bash pkgs.busybox pkgs.openjdk17 ];
 
         postInstall = ''
           for bin in $out/bin/*; do
             wrapProgram "$bin" \
-              --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.bash pkgs.busybox ]}
+              --prefix PATH : ${
+                pkgs.lib.makeBinPath [ pkgs.bash pkgs.busybox pkgs.openjdk17 ]
+              }
           done
         '';
       };
 
       defaultPackage.${system} = self.packages.${system}.minecraft-app-manager;
 
-      devShells.${system}.default =
-        pkgs.mkShell { buildInputs = with pkgs; [ go gopls bash busybox ]; };
+      devShells.${system}.default = pkgs.mkShell {
+        buildInputs = with pkgs; [ go gopls bash busybox openjdk17 ];
+      };
     };
 }
