@@ -14,11 +14,18 @@
         version = "1.0.0";
         src = ./.;
         vendorHash = null;
+
+        nativeBuildInputs = [ pkgs.makeWrapper ];
+        buildInputs = [ pkgs.bash pkgs.busybox ];
+
+        postInstall = ''
+          --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.bash pkgs.busybox ]}
+        '';
       };
 
       defaultPackage.${system} = self.packages.${system}.minecraft-app-manager;
 
       devShells.${system}.default =
-        pkgs.mkShell { buildInputs = with pkgs; [ go gopls ]; };
+        pkgs.mkShell { buildInputs = with pkgs; [ go gopls bash busybox ]; };
     };
 }
