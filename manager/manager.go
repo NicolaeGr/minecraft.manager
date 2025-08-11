@@ -51,6 +51,17 @@ func (sm *ServerManager) Start() error {
 			return fmt.Errorf("failed to change working directory: %w", err)
 		}
 	}
+
+	if _, err := os.Stat("./run.sh"); os.IsNotExist(err) {
+		return fmt.Errorf("run.sh not found in working directory: %s", sm.workingPath)
+	} else if err != nil {
+		return fmt.Errorf("error checking run.sh: %w", err)
+	} else if fi, err := os.Stat("./run.sh"); err != nil {
+		return fmt.Errorf("error getting run.sh file info: %w", err)
+	} else if !fi.Mode().IsRegular() || fi.Mode()&0111 == 0 {
+		return fmt.Errorf("run.sh is not executable or not a regular file")
+	}
+
 	cmd := exec.Command("./run.sh", "nogui")
 
 	stdin, err := cmd.StdinPipe()
