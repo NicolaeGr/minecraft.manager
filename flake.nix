@@ -13,7 +13,7 @@
         pname = "minecraft-app-manager";
         version = "1.0.0";
         src = ./.;
-        vendorSha256 = null;
+        vendorHash = null;
       };
 
       defaultPackage.${system} = self.packages.${system}.minecraft-app-manager;
