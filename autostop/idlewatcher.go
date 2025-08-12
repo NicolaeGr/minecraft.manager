@@ -13,12 +13,19 @@ var (
 	lastOnlineTime  time.Time
 )
 
+func ResetIdleWatcher() {
+	lastOnlineMutex.Lock()
+	defer lastOnlineMutex.Unlock()
+	lastOnlineTime = time.Now()
+}
+
 func CheckIdleAndStop(mgr *manager.ServerManager) {
 	lastOnlineMutex.Lock()
 	defer lastOnlineMutex.Unlock()
 
 	status := mgr.Status()
 	if status != "running" {
+		lastOnlineTime = time.Time{} // Reset when server stops
 		return
 	}
 
@@ -29,7 +36,9 @@ func CheckIdleAndStop(mgr *manager.ServerManager) {
 	}
 
 	if count > 0 {
-		lastOnlineTime = time.Now()
+		if lastOnlineTime.IsZero() || time.Since(lastOnlineTime) > 1*time.Minute {
+			lastOnlineTime = time.Now() // Reset when someone rejoins
+		}
 		return
 	}
 
@@ -41,6 +50,7 @@ func CheckIdleAndStop(mgr *manager.ServerManager) {
 	if time.Since(lastOnlineTime) > 15*time.Minute {
 		fmt.Println("IdleWatcher: No players for 15 minutes, stopping server.")
 		mgr.Stop()
+		lastOnlineTime = time.Time{} // Reset after stopping
 	}
 }
 
