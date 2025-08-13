@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"electrolit.biz/minecraft.manager/autostop"
 	"electrolit.biz/minecraft.manager/manager"
 
 	"github.com/mcstatus-io/mcutil/v4/query"
@@ -56,19 +57,7 @@ func StartBot(mgr *manager.ServerManager) {
 		}
 
 		switch m.Content {
-		case "!test":
-			fmt.Println("DiscordBot: !test command received")
-			count, max, names, err := mgr.GetPlayerList()
-			fmt.Printf("DiscordBot: GetPlayerList returned count=%d, max=%d, names=%v, err=%v\n", count, max, names, err)
-			if err != nil {
-				s.ChannelMessageSend(m.ChannelID, "Error getting player list: "+err.Error())
-				fmt.Println("DiscordBot: Error getting player list:", err)
-				return
-			}
-			msg := fmt.Sprintf("Players online: %d/%d\n%s", count, max, strings.Join(names, ", "))
-			s.ChannelMessageSend(m.ChannelID, msg)
-
-		case "!ping":
+		case "?ping":
 			colors := []int{0xff0000, 0xffa500, 0xffff00, 0x00ff00, 0x0000ff, 0xff00ff}
 			color := colors[rand.Intn(len(colors))]
 			pong := "Pong!"
@@ -81,7 +70,7 @@ func StartBot(mgr *manager.ServerManager) {
 				Color:       color,
 			}
 			s.ChannelMessageSendEmbed(m.ChannelID, embed)
-		case "!status":
+		case "?status":
 			status := mgr.Status()
 			color := 0xff0000
 			switch status {
@@ -97,7 +86,7 @@ func StartBot(mgr *manager.ServerManager) {
 			}
 			s.ChannelMessageSendEmbed(m.ChannelID, embed)
 
-		case "!players":
+		case "?players":
 			if mgr.Status() != "running" {
 				embed := &discordgo.MessageEmbed{
 					Title:       "Server Offline",
@@ -138,7 +127,7 @@ func StartBot(mgr *manager.ServerManager) {
 				Color:       color,
 			}
 			s.ChannelMessageSendEmbed(m.ChannelID, embed)
-		case "!start":
+		case "?start":
 			if isStarting {
 				embed := &discordgo.MessageEmbed{
 					Title:       "Don't rush me",
@@ -198,12 +187,75 @@ func StartBot(mgr *manager.ServerManager) {
 					Color:       0xff0000,
 				})
 			}()
-		case "!help":
+		case "?stop":
+			if mgr.Status() != "running" {
+				embed := &discordgo.MessageEmbed{
+					Title:       "Server Stop",
+					Description: "The Minecraft server is not running.",
+					Color:       0xff0000,
+				}
+				s.ChannelMessageSendEmbed(m.ChannelID, embed)
+				return
+			}
+			if m.Author.ID != "695996468762378252" {
+				count, _, _, err := mgr.GetPlayerList()
+				if err != nil {
+					count, _, _, err = getFallbackStatus()
+					if err != nil {
+						embed := &discordgo.MessageEmbed{
+							Title:       "Players Online",
+							Description: "Error retrieving player list: " + err.Error(),
+							Color:       0xff0000,
+						}
+						s.ChannelMessageSendEmbed(m.ChannelID, embed)
+						return
+					}
+				}
+				if count > 0 {
+					embed := &discordgo.MessageEmbed{
+						Title:       "Cannot Stop Server",
+						Description: fmt.Sprintf("There are currently %d players online. Please ask them to leave before stopping the server.", count),
+						Color:       0xff0000,
+					}
+					s.ChannelMessageSendEmbed(m.ChannelID, embed)
+					return
+				}
+			}
+
+			err := mgr.Stop()
+			if err != nil {
+				embed := &discordgo.MessageEmbed{
+					Title:       "Error stopping server",
+					Description: err.Error(),
+					Color:       0xff0000,
+				}
+				s.ChannelMessageSendEmbed(m.ChannelID, embed)
+				return
+			}
+			embed := &discordgo.MessageEmbed{
+				Title:       "Server Stopped",
+				Description: "Minecraft server has been stopped.",
+				Color:       0xff0000,
+			}
+			s.ChannelMessageSendEmbed(m.ChannelID, embed)
+
+		case "?countdown":
+			response := autostop.GetRemainingTime()
+			embed := &discordgo.MessageEmbed{
+				Title:       "Idle Countdown",
+				Description: response,
+				Color:       0x3498db,
+			}
+			s.ChannelMessageSendEmbed(m.ChannelID, embed)
+
+		case "?help", "!help":
 			helpMsg := "**Minecraft Server Bot Commands:**\n" +
 				"`!help` - Show this help message\n" +
 				"`!ping` - Test bot responsiveness\n" +
 				"`!status` - Show Minecraft server status\n" +
 				"`!start` - Start the Minecraft server\n" +
+				"`!stop` - Stop the Minecraft server\n" +
+				"`!countdown` - Show idle countdown timer\n" +
 				"`!players` - Show online player count and names"
 			embed := &discordgo.MessageEmbed{
 				Title:       "Help",

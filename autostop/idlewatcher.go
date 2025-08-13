@@ -60,3 +60,19 @@ func StartIdleWatcher(mgr *manager.ServerManager) {
 		time.Sleep(1 * time.Minute)
 	}
 }
+
+func GetRemainingTime() string {
+	lastOnlineMutex.Lock()
+	defer lastOnlineMutex.Unlock()
+
+	if lastOnlineTime.IsZero() {
+		return "Server has not been online yet."
+	}
+
+	remaining := time.Until(lastOnlineTime.Add(15 * time.Minute))
+	if remaining <= 0 {
+		return "Server is idle, will stop soon."
+	}
+
+	return fmt.Sprintf("Server has been idle for %s, will stop in %s.", time.Since(lastOnlineTime), remaining)
+}
