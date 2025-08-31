@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	rconlib "github.com/jltobler/go-rcon"
@@ -93,6 +94,8 @@ func (sm *ServerManager) Start() error {
 	}
 
 	cmd := exec.Command(sm.opts.RunScript)
+	// Ensure the Java process is killed if the Go process dies
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	stdoutWriter := NewTerminalWriter(sm) // Only write to terminal buffer, not app stdout
 	cmd.Stdout = stdoutWriter
 	cmd.Stderr = stdoutWriter
@@ -142,7 +145,8 @@ func (sm *ServerManager) Stop() error {
 		select {
 		case waitErr = <-done:
 		case <-time.After(10 * time.Second):
-			_ = cmd.Process.Kill()
+			// Kill the process group to ensure all children are stopped
+			_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 			waitErr = fmt.Errorf("timeout waiting for process to exit")
 		}
 	}
