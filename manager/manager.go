@@ -53,14 +53,8 @@ func NewServerManager(workDir string) *ServerManager {
 			opts.RCONPassword = pass
 			fmt.Println("RCON password loaded from server.properties, it's value is:", pass)
 		}
-		if host, ok := props["server-ip"]; ok && host != "" {
-			opts.RCONHost = host
-			fmt.Println("RCON host loaded from server.properties, it's value is:", host)
-		}
 	}
-	if opts.RCONHost == "" {
-		opts.RCONHost = "127.0.0.1"
-	}
+	opts.RCONHost = "127.0.0.1"
 	if opts.RCONPort == 0 {
 		opts.RCONPort = 25575
 	}
@@ -187,6 +181,7 @@ func (sm *ServerManager) setRunning() {
 		if sm.rcon == nil && sm.state == StateRunning {
 			time.Sleep(2 * time.Second)
 			addr := fmt.Sprintf("rcon://%s:%d", sm.opts.RCONHost, sm.opts.RCONPort)
+			fmt.Println("Connecting to RCON at \"" + addr + "\"")
 			conn, err := rconlib.Dial(addr, sm.opts.RCONPassword)
 			if err != nil {
 				fmt.Println("Failed to dial RCON:", err)
