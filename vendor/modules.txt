@@ -4,17 +4,9 @@ github.com/bwmarrin/discordgo
 # github.com/gorilla/websocket v1.4.2
 ## explicit; go 1.12
 github.com/gorilla/websocket
-# github.com/joho/godotenv v1.5.1
-## explicit; go 1.12
-github.com/joho/godotenv
-# github.com/mcstatus-io/mcutil/v4 v4.0.1
-## explicit; go 1.18
-github.com/mcstatus-io/mcutil/v4/formatting
-github.com/mcstatus-io/mcutil/v4/formatting/colors
-github.com/mcstatus-io/mcutil/v4/formatting/decorators
-github.com/mcstatus-io/mcutil/v4/options
-github.com/mcstatus-io/mcutil/v4/query
-github.com/mcstatus-io/mcutil/v4/response
+# github.com/jltobler/go-rcon v0.3.0
+## explicit; go 1.17
+github.com/jltobler/go-rcon
 # golang.org/x/crypto v0.0.0-20210421170649-83a5a9bb288b
 ## explicit; go 1.11
 golang.org/x/crypto/internal/subtle

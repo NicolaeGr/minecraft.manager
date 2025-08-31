@@ -8,8 +8,8 @@ import (
 	"syscall"
 
 	"electrolit.biz/minecraft.manager/autostop"
-	"electrolit.biz/minecraft.manager/discordbot"
 	"electrolit.biz/minecraft.manager/manager"
+	"electrolit.biz/minecraft.manager/webui"
 )
 
 func main() {
@@ -18,13 +18,11 @@ func main() {
 	fmt.Println("App workingPath:", *workingPath)
 	os.Chdir(*workingPath)
 
-	mgr := manager.NewServerManager()
-	fmt.Println("Starting Discord bot...")
+	mgr := manager.NewServerManager(*workingPath)
 
-	// Start idle watcher in background
 	go autostop.StartIdleWatcher(mgr)
+	go webui.StartWebUI(mgr)
 
-	// Handle termination signals to stop the server
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
@@ -34,6 +32,9 @@ func main() {
 		os.Exit(0)
 	}()
 
-	discordbot.StartBot(mgr)
-	// The server will be started/stopped via Discord bot commands
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	<-c // Block here until a signal is received
+	fmt.Println("Terminating, stopping Minecraft server if running...")
+	mgr.Stop()
+	os.Exit(0)
 }

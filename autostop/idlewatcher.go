@@ -23,8 +23,8 @@ func CheckIdleAndStop(mgr *manager.ServerManager) {
 	lastOnlineMutex.Lock()
 	defer lastOnlineMutex.Unlock()
 
-	status := mgr.Status()
-	if status != "running" {
+	state, err := mgr.Status()
+	if err != nil || state != manager.StateRunning {
 		lastOnlineTime = time.Time{} // Reset when server stops
 		return
 	}
@@ -56,7 +56,13 @@ func CheckIdleAndStop(mgr *manager.ServerManager) {
 
 func StartIdleWatcher(mgr *manager.ServerManager) {
 	for {
-		CheckIdleAndStop(mgr)
+		state, _ := mgr.Status()
+		if state == manager.StateRunning {
+			CheckIdleAndStop(mgr)
+		} else {
+			time.Sleep(10 * time.Second)
+			continue
+		}
 		time.Sleep(1 * time.Minute)
 	}
 }

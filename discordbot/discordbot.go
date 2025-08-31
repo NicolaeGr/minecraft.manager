@@ -3,39 +3,16 @@ package discordbot
 import (
 	"context"
 	"fmt"
-	"math/rand"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
-	"time"
 
-	"electrolit.biz/minecraft.manager/autostop"
+	"electrolit.biz/minecraft.manager/discordbot/commands"
 	"electrolit.biz/minecraft.manager/manager"
-
-	"github.com/mcstatus-io/mcutil/v4/query"
 
 	"github.com/bwmarrin/discordgo"
 )
-
-func getFallbackStatus() (count int, max int, playerNames []string, err error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
-	response, err := query.Full(ctx, "localhost", 25565)
-	if err != nil {
-		return 0, 0, nil, fmt.Errorf("timeout waiting for player list: %w", err)
-	}
-	max = 0
-	count = 0
-	if v, ok := response.Data["maxplayers"]; ok {
-		fmt.Sscanf(v, "%d", &max)
-	}
-	if v, ok := response.Data["numplayers"]; ok {
-		fmt.Sscanf(v, "%d", &count)
-	}
-
-	return count, max, response.Players, nil
-}
 
 func StartBot(mgr *manager.ServerManager) {
 	token := os.Getenv("DISCORD_BOT_TOKEN")
@@ -49,220 +26,24 @@ func StartBot(mgr *manager.ServerManager) {
 		return
 	}
 
-	isStarting := false
+	_ = commands.All()
 
 	dg.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
 		if m.Author.Bot {
 			return
 		}
 
-		switch m.Content {
-		case "?ping":
-			colors := []int{0xff0000, 0xffa500, 0xffff00, 0x00ff00, 0x0000ff, 0xff00ff}
-			color := colors[rand.Intn(len(colors))]
-			pong := "Pong!"
-			if rand.Intn(2) == 0 {
-				pong = "💣"
-			}
-			embed := &discordgo.MessageEmbed{
-				Title:       "Ping",
-				Description: pong,
-				Color:       color,
-			}
-			s.ChannelMessageSendEmbed(m.ChannelID, embed)
-		case "?status":
-			status := mgr.Status()
-			color := 0xff0000
-			switch status {
-			case "running":
-				color = 0x00ff00
-			case "starting":
-				color = 0xffff00
-			}
-			embed := &discordgo.MessageEmbed{
-				Title:       "Server Status",
-				Description: "Status: " + status,
-				Color:       color,
-			}
-			s.ChannelMessageSendEmbed(m.ChannelID, embed)
-
-		case "?players":
-			if mgr.Status() != "running" {
-				embed := &discordgo.MessageEmbed{
-					Title:       "Server Offline",
-					Description: "The Minecraft server is currently offline.",
-					Color:       0xff0000,
-				}
-				s.ChannelMessageSendEmbed(m.ChannelID, embed)
+		content := m.Content
+		if len(content) > 0 && content[0] == '?' {
+			parts := strings.Fields(content[1:])
+			if len(parts) == 0 {
 				return
 			}
-
-			count, max, players, err := mgr.GetPlayerList()
-			if err != nil {
-
-				count, max, players, err = getFallbackStatus()
-				if err != nil {
-					embed := &discordgo.MessageEmbed{
-						Title:       "Players Online",
-						Description: "Error retrieving player list: " + err.Error(),
-						Color:       0xff0000,
-					}
-					s.ChannelMessageSendEmbed(m.ChannelID, embed)
-					return
-				}
-			}
-
-			var color int
-			if count == 0 {
-				color = 0xff0000
-			} else if max > 0 && count < max/2 {
-				color = 0xffff00
-			} else {
-				color = 0x00ff00
-			}
-			msg := fmt.Sprintf("Players online: %d/%d\n%s", count, max, strings.Join(players, ", "))
-			embed := &discordgo.MessageEmbed{
-				Title:       "Players Online",
-				Description: msg,
-				Color:       color,
-			}
-			s.ChannelMessageSendEmbed(m.ChannelID, embed)
-		case "?start":
-			if isStarting {
-				embed := &discordgo.MessageEmbed{
-					Title:       "Don't rush me",
-					Description: "The server is still starting...",
-					Color:       0xffa500,
-				}
-				msg, _ := s.ChannelMessageSendEmbed(m.ChannelID, embed)
-				go func() {
-					time.Sleep(2 * time.Second)
-					s.ChannelMessageDelete(m.ChannelID, msg.ID)
-				}()
+			cmd := commands.Get(parts[0])
+			if cmd != nil {
+				cmd.Handler(context.Background(), s, m, parts[1:])
 				return
 			}
-			if mgr.Status() == "running" {
-				embed := &discordgo.MessageEmbed{
-					Title:       "Server Start",
-					Description: "Server is already running.",
-					Color:       0x00ff00,
-				}
-				s.ChannelMessageSendEmbed(m.ChannelID, embed)
-				return
-			}
-			isStarting = true
-			embed := &discordgo.MessageEmbed{
-				Title:       "Starting Minecraft Server...",
-				Description: "Please wait, this may take a few minutes.",
-				Color:       0xffa500, // orange
-			}
-			msg, _ := s.ChannelMessageSendEmbed(m.ChannelID, embed)
-			go func() {
-				err := mgr.Start()
-				if err != nil {
-					isStarting = false
-					s.ChannelMessageEditEmbed(m.ChannelID, msg.ID, &discordgo.MessageEmbed{
-						Title:       "Error starting server",
-						Description: err.Error(),
-						Color:       0xff0000,
-					})
-					return
-				}
-				for i := 0; i < 240; i++ {
-					if mgr.Status() == "running" {
-						isStarting = false
-						s.ChannelMessageEditEmbed(m.ChannelID, msg.ID, &discordgo.MessageEmbed{
-							Title:       "Server Started!",
-							Description: "Minecraft server is now online.",
-							Color:       0x00ff00,
-						})
-						return
-					}
-					time.Sleep(1 * time.Second)
-				}
-				isStarting = false
-				s.ChannelMessageEditEmbed(m.ChannelID, msg.ID, &discordgo.MessageEmbed{
-					Title:       "Server start timed out",
-					Description: "Minecraft server did not come online in time.",
-					Color:       0xff0000,
-				})
-			}()
-		case "?stop":
-			if mgr.Status() != "running" {
-				embed := &discordgo.MessageEmbed{
-					Title:       "Server Stop",
-					Description: "The Minecraft server is not running.",
-					Color:       0xff0000,
-				}
-				s.ChannelMessageSendEmbed(m.ChannelID, embed)
-				return
-			}
-			if m.Author.ID != "695996468762378252" {
-				count, _, _, err := mgr.GetPlayerList()
-				if err != nil {
-					count, _, _, err = getFallbackStatus()
-					if err != nil {
-						embed := &discordgo.MessageEmbed{
-							Title:       "Players Online",
-							Description: "Error retrieving player list: " + err.Error(),
-							Color:       0xff0000,
-						}
-						s.ChannelMessageSendEmbed(m.ChannelID, embed)
-						return
-					}
-				}
-				if count > 0 {
-					embed := &discordgo.MessageEmbed{
-						Title:       "Cannot Stop Server",
-						Description: fmt.Sprintf("There are currently %d players online. Please ask them to leave before stopping the server.", count),
-						Color:       0xff0000,
-					}
-					s.ChannelMessageSendEmbed(m.ChannelID, embed)
-					return
-				}
-			}
-
-			err := mgr.Stop()
-			if err != nil {
-				embed := &discordgo.MessageEmbed{
-					Title:       "Error stopping server",
-					Description: err.Error(),
-					Color:       0xff0000,
-				}
-				s.ChannelMessageSendEmbed(m.ChannelID, embed)
-				return
-			}
-			embed := &discordgo.MessageEmbed{
-				Title:       "Server Stopped",
-				Description: "Minecraft server has been stopped.",
-				Color:       0xff0000,
-			}
-			s.ChannelMessageSendEmbed(m.ChannelID, embed)
-
-		case "?countdown":
-			response := autostop.GetRemainingTime()
-			embed := &discordgo.MessageEmbed{
-				Title:       "Idle Countdown",
-				Description: response,
-				Color:       0x3498db,
-			}
-			s.ChannelMessageSendEmbed(m.ChannelID, embed)
-
-		case "?help", "!help":
-			helpMsg := "**Minecraft Server Bot Commands:**\n" +
-				"`!help` - Show this help message\n" +
-				"`!ping` - Test bot responsiveness\n" +
-				"`!status` - Show Minecraft server status\n" +
-				"`!start` - Start the Minecraft server\n" +
-				"`!stop` - Stop the Minecraft server\n" +
-				"`!countdown` - Show idle countdown timer\n" +
-				"`!players` - Show online player count and names"
-			embed := &discordgo.MessageEmbed{
-				Title:       "Help",
-				Description: helpMsg,
-				Color:       0x3498db,
-			}
-			s.ChannelMessageSendEmbed(m.ChannelID, embed)
 		}
 	})
 
