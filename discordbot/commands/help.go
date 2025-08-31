@@ -2,8 +2,9 @@ package commands
 
 import (
 	"context"
-	"github.com/bwmarrin/discordgo"
 	"strings"
+
+	"github.com/bwmarrin/discordgo"
 )
 
 func init() {

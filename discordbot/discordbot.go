@@ -14,13 +14,12 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-var AdminIDs = []string{
-	"123456789012345678", // Replace with actual admin Discord user IDs
+type Bot struct {
+	AdminIDs []string
 }
 
-// Exported IsAdmin for use in other packages
-func IsAdmin(userID string) bool {
-	for _, id := range AdminIDs {
+func (b *Bot) IsAdmin(userID string) bool {
+	for _, id := range b.AdminIDs {
 		if userID == id {
 			return true
 		}
@@ -29,6 +28,11 @@ func IsAdmin(userID string) bool {
 }
 
 func StartBot(mgr *manager.ServerManager) {
+	bot := &Bot{
+		AdminIDs: []string{
+			"123456789012345678", // Replace with actual admin Discord user IDs
+		},
+	}
 	token := os.Getenv("DISCORD_BOT_TOKEN")
 	if token == "" {
 		fmt.Println("DISCORD_BOT_TOKEN not set")
@@ -48,7 +52,7 @@ func StartBot(mgr *manager.ServerManager) {
 		}
 
 		// Restrict DMs to admins only
-		if m.GuildID == "" && !IsAdmin(m.Author.ID) {
+		if m.GuildID == "" && !bot.IsAdmin(m.Author.ID) {
 			return
 		}
 

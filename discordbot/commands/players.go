@@ -38,15 +38,13 @@ func init() {
 			var color int
 			if count == 0 {
 				color = 0xff0000
-			} else if max > 0 && count < max/2 {
-				color = 0xffff00
 			} else {
 				color = 0x00ff00
 			}
-			msg := fmt.Sprintf("Players online: %d/%d\n%s", count, max, strings.Join(players, ", "))
+			playerList := strings.Join(players, ", ")
 			embed := &discordgo.MessageEmbed{
 				Title:       "Players Online",
-				Description: msg,
+				Description: fmt.Sprintf("%d/%d: %s", count, max, playerList),
 				Color:       color,
 			}
 			s.ChannelMessageSendEmbed(m.ChannelID, embed)
