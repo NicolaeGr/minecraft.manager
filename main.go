@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"electrolit.biz/minecraft.manager/autostop"
+	"electrolit.biz/minecraft.manager/discordbot"
 	"electrolit.biz/minecraft.manager/manager"
 	"electrolit.biz/minecraft.manager/webui"
 )
@@ -32,9 +33,5 @@ func main() {
 		os.Exit(0)
 	}()
 
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	<-c // Block here until a signal is received
-	fmt.Println("Terminating, stopping Minecraft server if running...")
-	mgr.Stop()
-	os.Exit(0)
+	discordbot.StartBot(mgr)
 }

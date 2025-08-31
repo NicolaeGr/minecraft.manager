@@ -14,6 +14,20 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
+var AdminIDs = []string{
+	"123456789012345678", // Replace with actual admin Discord user IDs
+}
+
+// Exported IsAdmin for use in other packages
+func IsAdmin(userID string) bool {
+	for _, id := range AdminIDs {
+		if userID == id {
+			return true
+		}
+	}
+	return false
+}
+
 func StartBot(mgr *manager.ServerManager) {
 	token := os.Getenv("DISCORD_BOT_TOKEN")
 	if token == "" {
@@ -33,6 +47,11 @@ func StartBot(mgr *manager.ServerManager) {
 			return
 		}
 
+		// Restrict DMs to admins only
+		if m.GuildID == "" && !IsAdmin(m.Author.ID) {
+			return
+		}
+
 		content := m.Content
 		if len(content) > 0 && content[0] == '?' {
 			parts := strings.Fields(content[1:])
@@ -47,7 +66,7 @@ func StartBot(mgr *manager.ServerManager) {
 		}
 	})
 
-	dg.Identify.Intents = discordgo.IntentsGuilds | discordgo.IntentsGuildMessages
+	dg.Identify.Intents = discordgo.IntentsGuilds | discordgo.IntentsGuildMessages | discordgo.IntentsDirectMessages
 
 	if err := dg.Open(); err != nil {
 		fmt.Println("Error opening Discord connection:", err)

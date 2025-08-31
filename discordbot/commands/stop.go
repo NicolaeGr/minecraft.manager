@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"electrolit.biz/minecraft.manager/discordbot"
 	"electrolit.biz/minecraft.manager/manager"
 	"github.com/bwmarrin/discordgo"
 )
@@ -26,7 +27,7 @@ func init() {
 			}
 			// Only allow stop if no players or admin
 			count, _, _, err := mgr.GetPlayerList()
-			if err == nil && count > 0 && m.Author.ID != "695996468762378252" {
+			if err == nil && count > 0 && !discordbot.IsAdmin(m.Author.ID) {
 				embed := &discordgo.MessageEmbed{
 					Title:       "Cannot Stop Server",
 					Description: fmt.Sprintf("There are currently %d players online. Please ask them to leave before stopping the server.", count),
