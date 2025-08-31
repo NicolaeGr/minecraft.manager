@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"electrolit.biz/minecraft.manager/discordbot/consts"
 	"electrolit.biz/minecraft.manager/manager"
 	"github.com/bwmarrin/discordgo"
 )
@@ -14,7 +15,7 @@ func init() {
 		Name:        "players",
 		Description: "Show online player count and names",
 		Handler: func(ctx context.Context, s *discordgo.Session, m *discordgo.MessageCreate, args []string) {
-			mgr := ctx.Value("mgr").(*manager.ServerManager)
+			mgr := ctx.Value(consts.ManagerKey).(*manager.ServerManager)
 			state, _ := mgr.Status()
 			if state != manager.StateRunning {
 				embed := &discordgo.MessageEmbed{

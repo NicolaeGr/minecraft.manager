@@ -9,30 +9,18 @@ import (
 	"syscall"
 
 	"electrolit.biz/minecraft.manager/discordbot/commands"
+	"electrolit.biz/minecraft.manager/discordbot/consts"
 	"electrolit.biz/minecraft.manager/manager"
 
 	"github.com/bwmarrin/discordgo"
 )
 
-type Bot struct {
-	AdminIDs []string
-}
-
-func (b *Bot) IsAdmin(userID string) bool {
-	for _, id := range b.AdminIDs {
-		if userID == id {
-			return true
-		}
-	}
-	return false
-}
+// contextKey is a private type for context keys in this package
+// to avoid collisions with other context uses.
+type contextKey string
 
 func StartBot(mgr *manager.ServerManager) {
-	bot := &Bot{
-		AdminIDs: []string{
-			"123456789012345678", // Replace with actual admin Discord user IDs
-		},
-	}
+
 	token := os.Getenv("DISCORD_BOT_TOKEN")
 	if token == "" {
 		fmt.Println("DISCORD_BOT_TOKEN not set")
@@ -52,7 +40,8 @@ func StartBot(mgr *manager.ServerManager) {
 		}
 
 		// Restrict DMs to admins only
-		if m.GuildID == "" && !bot.IsAdmin(m.Author.ID) {
+		if m.GuildID == "" && !consts.IsAdmin(m.Author.ID) {
+			fmt.Println("Ignoring DM from non-admin user:", m.Author.ID, " ", m.GuildID)
 			return
 		}
 
@@ -64,7 +53,8 @@ func StartBot(mgr *manager.ServerManager) {
 			}
 			cmd := commands.Get(parts[0])
 			if cmd != nil {
-				cmd.Handler(context.Background(), s, m, parts[1:])
+				ctx := context.WithValue(context.Background(), consts.ManagerKey, mgr)
+				cmd.Handler(ctx, s, m, parts[1:])
 				return
 			}
 		}

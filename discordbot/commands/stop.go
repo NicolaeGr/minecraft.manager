@@ -14,7 +14,7 @@ func init() {
 		Name:        "stop",
 		Description: "Stop the Minecraft server",
 		Handler: func(ctx context.Context, s *discordgo.Session, m *discordgo.MessageCreate, args []string) {
-			mgr := ctx.Value("mgr").(*manager.ServerManager)
+			mgr := ctx.Value(consts.ManagerKey).(*manager.ServerManager)
 			state, _ := mgr.Status()
 			if state != manager.StateRunning {
 				embed := &discordgo.MessageEmbed{

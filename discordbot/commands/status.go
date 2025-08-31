@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 
+	"electrolit.biz/minecraft.manager/discordbot/consts"
 	"electrolit.biz/minecraft.manager/manager"
 	"github.com/bwmarrin/discordgo"
 )
@@ -12,7 +13,7 @@ func init() {
 		Name:        "status",
 		Description: "Show Minecraft server status",
 		Handler: func(ctx context.Context, s *discordgo.Session, m *discordgo.MessageCreate, args []string) {
-			mgr := ctx.Value("mgr").(*manager.ServerManager)
+			mgr := ctx.Value(consts.ManagerKey).(*manager.ServerManager)
 			state, _ := mgr.Status()
 			color := 0xff0000
 			switch state {

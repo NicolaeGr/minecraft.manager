@@ -1,7 +1,7 @@
 package consts
 
 var AdminIDs = []string{
-	"123456789012345678", // Replace with actual admin Discord user IDs
+	"695996468762378252",
 }
 
 func IsAdmin(userID string) bool {
@@ -12,3 +12,7 @@ func IsAdmin(userID string) bool {
 	}
 	return false
 }
+
+type ContextKey string
+
+const ManagerKey ContextKey = "mgr"
