@@ -2,10 +2,10 @@ package manager
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -46,7 +46,7 @@ func NewServerManager(workDir string) *ServerManager {
 	props, err := parseServerProperties(filepath.Join(workDir, "server.properties"))
 	if err == nil {
 		if port, ok := props["rcon.port"]; ok {
-			opts.RCONPort, _ = strconv.Atoi(port)
+			opts.RCONPort = port
 			fmt.Println("RCON port loaded from server.properties, it's value is:", opts.RCONPort)
 		}
 		if pass, ok := props["rcon.password"]; ok {
@@ -55,14 +55,14 @@ func NewServerManager(workDir string) *ServerManager {
 		}
 	}
 	opts.RCONHost = "127.0.0.1"
-	if opts.RCONPort == 0 {
-		opts.RCONPort = 25575
+	if opts.RCONPort == "" {
+		opts.RCONPort = "25575"
 	}
 
 	return &ServerManager{
 		opts:  opts,
 		state: StateStopped,
-		rcon:  nil, // rcon is now initialized after server is running
+		rcon:  nil,
 	}
 }
 
@@ -222,8 +222,13 @@ func (sm *ServerManager) connectRCON(retries int) error {
 		return nil
 	}
 	sm.mu.Unlock()
-	addr := fmt.Sprintf("%s:%d", sm.opts.RCONHost, sm.opts.RCONPort)
-	conn, err := rconlib.Dial(addr, sm.opts.RCONPassword)
+
+	c, err := net.Dial("tcp", net.JoinHostPort(sm.opts.RCONHost, sm.opts.RCONPort))
+	if err != nil {
+		return err
+	}
+
+	conn, err := rconlib.NewConn(c, sm.opts.RCONPassword)
 	if err != nil {
 		time.Sleep(1 * time.Second)
 		return sm.connectRCON(retries + 1)

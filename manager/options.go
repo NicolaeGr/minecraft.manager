@@ -8,7 +8,7 @@ type Options struct {
 
 	// RCON, parsed from server.properties if not set
 	RCONHost     string
-	RCONPort     int
+	RCONPort     string
 	RCONPassword string
 
 	// Dial & command timeouts
