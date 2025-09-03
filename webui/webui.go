@@ -123,7 +123,7 @@ func StartWebUI(mgr *manager.ServerManager) {
 	http.ListenAndServe(":8080", nil)
 }
 
-const htmlPage = `<!DOCTYPE html>
+const htmlPage = /** @html */ `<!DOCTYPE html>
 <html>
 <head>
 <title>Minecraft Manager Web UI</title>
@@ -163,6 +163,10 @@ ws.onmessage = function(e) {
   } else if(data.type === 'stdout') {
     let terminal = document.getElementById('terminal');
     terminal.textContent += data.line + '\n';
+    let lines = terminal.textContent.split('\n');
+    if (lines.length > 500) {
+      terminal.textContent = lines.slice(lines.length - 500).join('\n');
+    }
     terminal.scrollTop = terminal.scrollHeight;
   } else if(data.type === 'rcon') {
     document.getElementById('rconResp').innerText = data.resp;
