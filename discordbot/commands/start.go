@@ -32,18 +32,21 @@ func init() {
 			}
 			msg, _ := s.ChannelMessageSendEmbed(m.ChannelID, embed)
 			go func() {
-				err := mgr.Start()
-				if err != nil {
-					s.ChannelMessageEditEmbed(m.ChannelID, msg.ID, &discordgo.MessageEmbed{
-						Title:       "Error starting server",
-						Description: err.Error(),
-						Color:       0xff0000,
-					})
-					return
+				var err error
+				if state != manager.StateStarting {
+					err = mgr.Start()
+					if err != nil {
+						s.ChannelMessageEditEmbed(m.ChannelID, msg.ID, &discordgo.MessageEmbed{
+							Title:       "Error starting server",
+							Description: err.Error(),
+							Color:       0xff0000,
+						})
+						return
+					}
 				}
 				for i := 0; i < 240; i++ {
-					state, _ := mgr.Status()
-					if state == manager.StateRunning {
+					curState, _ := mgr.Status()
+					if curState == manager.StateRunning {
 						s.ChannelMessageEditEmbed(m.ChannelID, msg.ID, &discordgo.MessageEmbed{
 							Title:       "Server Started!",
 							Description: "Minecraft server is now online.",

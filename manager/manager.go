@@ -368,3 +368,11 @@ func RegisterTerminalListener(l LineListener) {
 func GetTerminalBuffer() []string {
 	return defaultTerminalHub.GetBuffer()
 }
+
+func GetTerminalBufferTail(n int) []string {
+	all := defaultTerminalHub.GetBuffer()
+	if n <= 0 || n >= len(all) {
+		return all
+	}
+	return all[len(all)-n:]
+}

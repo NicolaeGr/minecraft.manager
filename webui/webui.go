@@ -69,7 +69,7 @@ func StartWebUI(mgr *manager.ServerManager) {
 		}()
 
 		// Send buffer on connect
-		for _, line := range manager.GetTerminalBuffer() {
+		for _, line := range manager.GetTerminalBufferTail(50) {
 			_ = client.SafeWriteMessage(websocket.TextMessage, []byte(fmt.Sprintf(`{"type":"stdout","line":%q}`, line)))
 		}
 
