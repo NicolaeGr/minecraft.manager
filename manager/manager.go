@@ -178,16 +178,13 @@ func (sm *ServerManager) setRunning() {
 	defer sm.mu.Unlock()
 	if sm.state == StateStarting || sm.state == StateStopping {
 		sm.state = StateRunning
-		if sm.rcon == nil && sm.state == StateRunning {
+		if sm.rcon == nil || sm.rcon.IsClosed() {
+			sm.mu.Unlock()
 			time.Sleep(2 * time.Second)
-			addr := fmt.Sprintf("rcon://%s:%d", sm.opts.RCONHost, sm.opts.RCONPort)
-			fmt.Println("Connecting to RCON at \"" + addr + "\"")
-			conn, err := rconlib.Dial(addr, sm.opts.RCONPassword)
-			if err != nil {
-				fmt.Println("Failed to dial RCON:", err)
-			} else {
-				sm.rcon = conn
+			if err := sm.connectRCON(0); err != nil {
+				fmt.Println("Failed to connect RCON:", err)
 			}
+			sm.mu.Lock()
 		}
 	}
 }
@@ -205,13 +202,8 @@ func (sm *ServerManager) watchProcess(cmd *exec.Cmd) {
 
 func (sm *ServerManager) Command(cmd string) (string, error) {
 	fmt.Println("Executing RCON command:", cmd)
-	if sm.rcon == nil || sm.rcon.IsClosed() {
-		addr := fmt.Sprintf("%s:%d", sm.opts.RCONHost, sm.opts.RCONPort)
-		conn, err := rconlib.Dial(addr, sm.opts.RCONPassword)
-		if err != nil {
-			return "", fmt.Errorf("RCON not connected: %w", err)
-		}
-		sm.rcon = conn
+	if err := sm.connectRCON(0); err != nil {
+		return "", err
 	}
 	resp, err := sm.rcon.SendCommand(cmd)
 	if err != nil {
@@ -220,9 +212,31 @@ func (sm *ServerManager) Command(cmd string) (string, error) {
 	return resp, nil
 }
 
+func (sm *ServerManager) connectRCON(retries int) error {
+	if retries > 5 {
+		return fmt.Errorf("RCON connection failed after 5 retries")
+	}
+	sm.mu.Lock()
+	if sm.rcon != nil && !sm.rcon.IsClosed() {
+		sm.mu.Unlock()
+		return nil
+	}
+	sm.mu.Unlock()
+	addr := fmt.Sprintf("%s:%d", sm.opts.RCONHost, sm.opts.RCONPort)
+	conn, err := rconlib.Dial(addr, sm.opts.RCONPassword)
+	if err != nil {
+		time.Sleep(1 * time.Second)
+		return sm.connectRCON(retries + 1)
+	}
+	sm.mu.Lock()
+	sm.rcon = conn
+	sm.mu.Unlock()
+	return nil
+}
+
 func (sm *ServerManager) GetPlayerList() (count, max int, players []string, err error) {
-	if sm.rcon == nil {
-		return 0, 0, nil, fmt.Errorf("RCON not connected")
+	if err := sm.connectRCON(0); err != nil {
+		return 0, 0, nil, err
 	}
 	out, err := sm.Command("list")
 	if err != nil {
